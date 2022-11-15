@@ -182,11 +182,11 @@ if __name__ == '__main__':
         ave_ssim = sum(train_results['ssim']) / len(train_results['ssim'])
         writer.add_scalar("PSNR", ave_psnr, epoch)
         writer.add_scalar("SSIM", ave_ssim, epoch)
-        logging.info('--Training Average PSNR/SSIM(RGB): {:.2f} dB; {:.4f}'.format(ave_psnr, ave_ssim))
+        logging.info('--Training Average PSNR: {:.2f} dB; SSIM: {:.4f}'.format(ave_psnr, ave_ssim))
 
         if (epoch + 1) % config.val_freq == 0:
             logging.info('Starting eval...')
-            logging.info('Running val {} in epoch {}'.format(config.dataset_name, epoch + 1))
+            logging.info('Running val in epoch {}'.format(epoch + 1))
             
             for data in tqdm(val_loader):
                 rgb_image, raw_image = data
@@ -210,7 +210,7 @@ if __name__ == '__main__':
             ave_ssim = sum(test_results['ssim']) / len(test_results['ssim'])
             writer.add_scalar("PSNR", ave_psnr, epoch)
             writer.add_scalar("SSIM", ave_ssim, epoch)
-            logging.info('--Testing Average PSNR/SSIM(RGB): {:.2f} dB; {:.4f}'.format(ave_psnr, ave_ssim))
+            logging.info('--Testing Average PSNR: {:.2f} dB; SSIM: {:.4f}'.format(ave_psnr, ave_ssim))
             logging.info('Eval done...')
 
             if ave_psnr + ave_ssim > main_score:
