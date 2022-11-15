@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
         # model
         "input_dim": 3,
-        "embed_dim": 96,
+        "embed_dim": 128,
         "num_out_ch": 4,
 
         # load & save checkpoint
@@ -100,10 +100,14 @@ if __name__ == '__main__':
 
     set_logging(config)
     logging.info(config)
-
     writer = SummaryWriter(config.tensorboard_path)
+
     TrainDataset = ISPData(config.dataset_path, type="train")
     ValDataset = ISPData(config.dataset_path, type="val")
+
+    logging.info('number of train scenes: {}'.format(len(TrainDataset)))
+    logging.info('number of val scenes: {}'.format(len(ValDataset)))
+    logging.info('train : val ratio is: {:.4}'.format(len(TrainDataset) / len(ValDataset)))
 
     train_loader = DataLoader(
         dataset=TrainDataset,
