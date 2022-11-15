@@ -7,7 +7,7 @@ import torch.nn as nn
 import random
 import calculate_psnr_ssim as util
 
-from torchvision import transforms
+from model import ReversedISP
 from collections import OrderedDict
 from config import Config
 from torch.utils.data import DataLoader
@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '7, 0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '6, 7, 8, 9'
 
 
 def setup_seed(seed):
@@ -62,7 +62,7 @@ if __name__ == '__main__':
         "dataset_path": "/mnt/data/wth22/ISP_dataset/train/",
 
         # optimization
-        "batch_size": 4,
+        "batch_size": 32,
         "learning_rate": 1e-3,
         "weight_decay": 1e-5,
         "n_epoch": 300,
@@ -72,7 +72,9 @@ if __name__ == '__main__':
         "num_workers": 8,
 
         # model
-
+        "input_dim": 3,
+        "embed_dim": 96,
+        "num_out_ch": 4,
 
         # load & save checkpoint
         "model_name": "ISP-temp",
@@ -118,8 +120,8 @@ if __name__ == '__main__':
         shuffle=False
     )
 
-    # net = creat_model(config=config, model_weight_path=config.pretrained_weight_path, pretrained=config.pretrained)
-    # net = nn.DataParallel(net).cuda()
+    net = ReversedISP(input_dim=config.input_dim, embed_dim=config.embed_dim, num_out_ch=config.num_out_ch)
+    net = nn.DataParallel(net).cuda()
     logging.info('{} : {} [M]'.format('#Params', sum(map(lambda x: x.numel(), net.parameters())) / 10 ** 6))
 
     # loss function
@@ -156,7 +158,7 @@ if __name__ == '__main__':
             rgb_image = rgb_image.cuda()
             raw_image = raw_image.cuda()
 
-            pred_image = net(d, table)
+            pred_image = net(rgb_image)
 
             optimizer.zero_grad()
             loss = criterion(pred_image, raw_image)
@@ -165,10 +167,12 @@ if __name__ == '__main__':
             optimizer.step()
             scheduler.step()
 
-            pred_image = (pred_image * 255.0).round().astype(np.uint8)  # float32 to uint8
-            raw_image = (raw_image * 255.0).round().astype(np.uint8)  # float32 to uint8
-            pred_image = np.transpose(pred_image, (1, 2, 0))
-            raw_image = np.transpose(raw_image, (1, 2, 0))
+            pred_image = pred_image.cpu().detach().numpy()
+            pred_image = (pred_image * 1024.0).round().astype(np.uint8)  # float32 to uint8
+            pred_image = np.transpose(pred_image, (0, 2, 3, 1))
+            raw_image = raw_image.cpu().detach().numpy()
+            raw_image = np.transpose(raw_image, (0, 2, 3, 1)).astype(np.uint8)
+
             psnr = util.calculate_psnr(pred_image, raw_image, crop_border=0)
             ssim = util.calculate_ssim(pred_image, raw_image, crop_border=0)
             train_results['psnr'].append(psnr)
@@ -189,12 +193,14 @@ if __name__ == '__main__':
                 rgb_image = rgb_image.cuda()
                 raw_image = raw_image.cuda()
 
-                pred_image = net(d, table)
+                pred_image = net(rgb_image)
 
-                pred_image = (pred_image * 255.0).round().astype(np.uint8)  # float32 to uint8
-                raw_image = (raw_image * 255.0).round().astype(np.uint8)  # float32 to uint8
-                pred_image = np.transpose(pred_image, (1, 2, 0))
-                raw_image = np.transpose(raw_image, (1, 2, 0))
+                pred_image = pred_image.cpu().detach().numpy()
+                pred_image = (pred_image * 1024.0).round().astype(np.uint8)  # float32 to uint8
+                pred_image = np.transpose(pred_image, (0, 2, 3, 1))
+                raw_image = raw_image.cpu().detach().numpy()
+                raw_image = np.transpose(raw_image, (0, 2, 3, 1)).astype(np.uint8)
+
                 psnr = util.calculate_psnr(pred_image, raw_image, crop_border=0)
                 ssim = util.calculate_ssim(pred_image, raw_image, crop_border=0)
                 test_results['psnr'].append(psnr)
